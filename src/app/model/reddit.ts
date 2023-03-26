@@ -13,6 +13,7 @@ export const linkSchema = z.object({
     // reddit's id for things (referred to as fullname)
     name: z.string(),
     url: z.string(),
+    created_utc: z.number(),
   }),
 })
 
