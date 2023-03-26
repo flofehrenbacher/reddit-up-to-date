@@ -1,91 +1,78 @@
-import Image from 'next/image'
+'use client'
+
 import { Inter } from 'next/font/google'
-import styles from './page.module.css'
+import { useEffect, useState } from 'react'
+import { Listing } from './model/reddit'
 
 const inter = Inter({ subsets: ['latin'] })
 
+type State = 'success' | 'loading' | 'error'
+
 export default function Home() {
+  const [state, setState] = useState<State>('loading')
+  const [data, setData] = useState<Listing['children']>([])
+
+  useEffect(() => {
+    fetchNewSubredditData('benhoward').then((data) => {
+      setData(data.children)
+      setState('success')
+    })
+  }, [])
+
+  if (state === 'loading') {
+    return <Loading />
+  }
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
+    <main className={`${inter.className}  h-screen snap-y snap-mandatory overflow-scroll`}>
+      {data.map((item) => (
+        <Section
+          key={item.data.name}
+          title={item.data.title}
+          text={item.data.selftext}
+          url={item.data.url}
         />
-        <div className={styles.thirteen}>
-          <Image src="/thirteen.svg" alt="13" width={40} height={31} priority />
-        </div>
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://beta.nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
+      ))}
+      <Last />
     </main>
   )
+}
+
+interface Section {
+  title: string
+  text?: string
+  url: string
+}
+function Section({ title, text, url }: Section) {
+  return (
+    <section className="h-5/6 -mb-4 snap-start snap-always p-8 bg-gradient-to-br even:from-cyan-800 even:to-blue-500 odd:text-slate-700 even:text-zinc-100 odd:from-slate-50 odd:to-slate-400 place-content-center overflow-hidden">
+      <a href={url} className="h-full flex flex-col gap-5" target="_blank">
+        <h2 className="text-3xl line-clamp-4 text-ellipsis">{title}</h2>
+        <p className="line-clamp-6 text-ellipsis">{text}</p>
+        <p className="self-start border-b-4 border-indigo-700">See post on reddit →</p>
+      </a>
+    </section>
+  )
+}
+
+function Last() {
+  return (
+    <section className="h-screen grid place-content-center snap-start snap-always bg-green-800">
+      <h2 className="text-2xl text-white">You are up to date 🏁</h2>
+    </section>
+  )
+}
+
+function Loading() {
+  return (
+    <section className="h-screen grid place-content-center snap-start snap-always bg-teal-800">
+      <div className="animate-ping h-5 w-5 bg-slate-50"></div>
+    </section>
+  )
+}
+
+async function fetchNewSubredditData(subreddit: string) {
+  const response = await fetch(`https://www.reddit.com/r/${subreddit}/new.json`)
+  const json = await response.json()
+  return json.data as Listing
 }
