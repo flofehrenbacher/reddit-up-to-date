@@ -1,36 +1,29 @@
-export interface Listing {
-  kind: 'listing'
-  before: string | null
-  after: string | null
-  // distinct number of children
-  dist: number
-  children: ListingItem[]
-}
+import { z } from 'zod'
 
-const types = {
-  t1: 'Comment',
-  t2: 'Account',
-  t3: 'Link',
-  t4: 'Message',
-  t5: 'Subreddit',
-  t6: 'Award',
-}
-
-export type TypeCode = keyof typeof types
-
-type ListingItem = Link
-
-type Link = {
-  kind: 't3'
-  data: {
+export type Link = z.infer<typeof linkSchema>
+export const linkSchema = z.object({
+  kind: z.literal('t3'),
+  data: z.object({
     // label (e.g. '❔ Question' or '🔊 New Release')
-    link_flair_text?: string
-    title: string
-    selftext?: string
-    ups: number
-    downs: number
+    link_flair_text: z.string().optional(),
+    title: z.string(),
+    selftext: z.string().optional(),
+    ups: z.number(),
+    downs: z.number(),
     // reddit's id for things (referred to as fullname)
-    name: string
-    url: string
-  }
-}
+    name: z.string(),
+    url: z.string(),
+  }),
+})
+
+export type Listing = z.infer<typeof listingSchema>
+export const listingSchema = z.object({
+  kind: z.literal('Listing'),
+  data: z.object({
+    before: z.string().nullable(),
+    after: z.string().nullable(),
+    // distinct number of children
+    dist: z.number(),
+    children: z.array(z.union([linkSchema, linkSchema])),
+  }),
+})

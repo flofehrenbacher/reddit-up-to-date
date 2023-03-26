@@ -1,5 +1,6 @@
 'use client'
 
+import axios from 'axios'
 import { Inter } from 'next/font/google'
 import { useEffect, useState } from 'react'
 import { Listing } from './model/reddit'
@@ -10,7 +11,7 @@ type State = 'success' | 'loading' | 'error'
 
 export default function Home() {
   const [state, setState] = useState<State>('loading')
-  const [data, setData] = useState<Listing['children']>([])
+  const [data, setData] = useState<Listing['data']['children']>([])
 
   useEffect(() => {
     fetchNewSubredditData('benhoward').then((data) => {
@@ -72,7 +73,6 @@ function Loading() {
 }
 
 async function fetchNewSubredditData(subreddit: string) {
-  const response = await fetch(`https://www.reddit.com/r/${subreddit}/new.json`)
-  const json = await response.json()
-  return json.data as Listing
+  const { data } = await axios.get<Listing>(`/api/posts/${subreddit}`)
+  return data.data
 }
