@@ -1,0 +1,13 @@
+{
+  "name": "Up to date",
+  "start_url": ".",
+  "orientation": "portrait",
+  "display": "standalone",
+  "theme_color": "#102542",
+  "icons": [
+    {
+      "src": "images/homescreen.svg",
+      "sizes": "any"
+    }
+  ]
+}
