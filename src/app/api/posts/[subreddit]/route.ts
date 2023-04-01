@@ -18,11 +18,16 @@ export async function GET(request: Request, { params }: { params: { subreddit: s
   }
 
   try {
-    const beforeData = await redditClient(
+    const beforeOrAfterData = await redditClient(
       `/r/${params.subreddit}/new.json?${urlSearchParams.toString()}`,
     )
-    const beforeListing = listingSchema.parse(beforeData.data)
-    if (beforeListing.data.children.length === 0) {
+    const beforeOrAfterListing = listingSchema.parse(beforeOrAfterData.data)
+
+    if (after) {
+      return NextResponse.json(beforeOrAfterListing)
+    }
+
+    if (beforeOrAfterListing.data.children.length === 0) {
       return NextResponse.json([])
     }
 
@@ -30,8 +35,8 @@ export async function GET(request: Request, { params }: { params: { subreddit: s
     const newListing = listingSchema.parse(newData.data)
 
     const listing =
-      firstLink(beforeListing)?.data.name === firstLink(newListing)?.data.name
-        ? beforeListing
+      firstLink(beforeOrAfterListing)?.data.name === firstLink(newListing)?.data.name
+        ? beforeOrAfterListing
         : newListing
 
     const listingChildrenWithHtml = await Promise.all(
