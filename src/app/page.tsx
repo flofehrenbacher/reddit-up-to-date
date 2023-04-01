@@ -1,9 +1,9 @@
 'use client'
 
-import { QueryClient, QueryClientProvider, useInfiniteQuery } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { Inter } from 'next/font/google'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocalStorageState } from './hooks/use-local-storage-state'
 import { Link } from './model/reddit'
 
@@ -13,20 +13,37 @@ const queryClient = new QueryClient()
 export default function AppWithClientProvider() {
   return (
     <QueryClientProvider client={queryClient}>
-      <UpToDate />
+      <main className={`${inter.className} h-screen snap-y snap-mandatory overflow-scroll`}>
+        <UpToDate />
+      </main>
     </QueryClientProvider>
   )
 }
 
 function UpToDate() {
   const [before, setBefore] = useLocalStorageState<string | null>('before', null)
+  const [loadMoreState, setLoadMoreState] = useState<'initial' | 'more'>('initial')
 
   const subreddit = 'benhoward'
 
-  const { data, status, fetchNextPage } = useInfiniteQuery({
-    queryKey: [subreddit],
-    queryFn: ({ pageParam = before }) => {
-      return fetchNewSubredditData(subreddit, pageParam)
+  const { data: newData, status } = useQuery(['new', subreddit], async () =>
+    fetchSubredditDataBefore(subreddit, before),
+  )
+  const newPosts = newData ?? []
+  const firstNewPost = newPosts.at(0)
+  const lastNewPost = newPosts.at(-1)
+
+  useEffect(() => {
+    if (firstNewPost) {
+      setBefore(firstNewPost.data.name)
+    }
+  }, [firstNewPost, setBefore])
+
+  const { data, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ['more', subreddit],
+    enabled: loadMoreState === 'more',
+    queryFn: ({ pageParam = lastNewPost?.data.name }) => {
+      return fetchSubredditDataAfter(subreddit, pageParam)
     },
     getNextPageParam: (lastPage) => {
       const nextPageParam = lastPage.at(-1)?.data.name
@@ -36,54 +53,57 @@ function UpToDate() {
       }
     },
   })
+  const olderPosts = (data?.pages ?? []).at(-1) ?? []
 
-  const pages = data?.pages ?? []
-  const firstPost = pages.flat()[0]
-
-  useEffect(() => {
-    return () => {
-      if (firstPost) {
-        setBefore(firstPost.data.name)
-      }
-    }
-  }, [firstPost, setBefore])
-
-  if (status === 'loading') {
+  if (status === 'loading' || isFetchingNextPage) {
     return <Loading />
   }
 
+  if (loadMoreState === 'initial') {
+    return (
+      <>
+        {newPosts.map((post) => {
+          const created = new Date(post.data.created_utc * 1000)
+          const date = `${created.toLocaleDateString('de')} ${created.toLocaleTimeString('de')}`
+          return (
+            <Section
+              key={post.data.name}
+              label={<Label link={post} />}
+              title={post.data.title}
+              text={post.data.selftext}
+              url={post.data.url}
+              date={date}
+            />
+          )
+        })}
+        <Last loadMore={() => setLoadMoreState('more')} />
+      </>
+    )
+  }
   return (
-    <main className={`${inter.className}  h-screen snap-y snap-mandatory overflow-scroll`}>
-      {pages.map((page) => (
-        <>
-          {page.map((item) => {
-            const created = new Date(item.data.created_utc * 1000)
-            const date = `${created.toLocaleDateString('de')} ${created.toLocaleTimeString('de')}`
-            return (
-              <Section
-                key={item.data.name}
-                label={<Label link={item} />}
-                title={item.data.title}
-                text={item.data.selftext}
-                url={item.data.url}
-                date={date}
-              />
-            )
-          })}
-          <Last
-            finish={() => {
-              firstPost?.data.name && setBefore(firstPost.data.name)
-              document.location.href = '/'
-            }}
-            resetToNow={() => {
-              setBefore(null)
-              document.location.href = '/'
-            }}
+    <>
+      {olderPosts.map((post) => {
+        const created = new Date(post.data.created_utc * 1000)
+        const date = `${created.toLocaleDateString('de')} ${created.toLocaleTimeString('de')}`
+        return (
+          <Section
+            key={post.data.name}
+            label={<Label link={post} />}
+            title={post.data.title}
+            text={post.data.selftext}
+            url={post.data.url}
+            date={date}
           />
-          ,
-        </>
-      ))}
-    </main>
+        )
+      })}
+      {olderPosts.length > 0 ? (
+        <Last
+          loadMore={() => {
+            fetchNextPage()
+          }}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -108,28 +128,18 @@ function Section({ title, text, url, date, label }: Section) {
   )
 }
 
-function Last({ finish, resetToNow }: { finish: () => void; resetToNow: () => void }) {
+function Last({ loadMore }: { loadMore: () => void }) {
   return (
-    <section className="flex-col gap-5 h-screen grid place-content-center snap-start snap-always bg-gradient-to-br from-green-800 to-green-400">
+    <section className="flex-col gap-5 h-5/6 grid place-content-center snap-start snap-always bg-gradient-to-br from-green-800 to-green-400">
       <h2 className="text-2xl text-white">You are up to date 🏁</h2>
       <button
         onClick={() => {
-          finish()
+          loadMore()
         }}
-        className="rounded-full bg-cyan-600"
+        className="rounded-full bg-cyan-50"
       >
-        Finish for now
+        Show older posts
       </button>
-      {
-        <button
-          onClick={() => {
-            resetToNow()
-          }}
-          className="rounded-full bg-cyan-50"
-        >
-          Resest to now
-        </button>
-      }
     </section>
   )
 }
@@ -142,8 +152,13 @@ function Loading() {
   )
 }
 
-async function fetchNewSubredditData(subreddit: string, before: string | null) {
+async function fetchSubredditDataBefore(subreddit: string, before: string | null) {
   const { data } = await axios.get<Link[]>(`/api/posts/${subreddit}?before=${before}`)
+  return data
+}
+
+async function fetchSubredditDataAfter(subreddit: string, after: string | null) {
+  const { data } = await axios.get<Link[]>(`/api/posts/${subreddit}?after=${after}`)
   return data
 }
 

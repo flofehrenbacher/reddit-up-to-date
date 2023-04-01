@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request, { params }: { params: { subreddit: string } }) {
   const { searchParams } = new URL(request.url)
   const before = searchParams.get('before')
-  const after = searchParams.get('before')
+  const after = searchParams.get('after')
 
   const urlSearchParams = new URLSearchParams()
   if (typeof before === 'string') {
@@ -16,7 +16,7 @@ export async function GET(request: Request, { params }: { params: { subreddit: s
 
   try {
     const data = await redditClient(
-      `/r/${params.subreddit}/new.json?${urlSearchParams.toString()}&limit=${10}`,
+      `/r/${params.subreddit}/new.json?${urlSearchParams.toString()}&limit=${3}`,
     )
 
     const listing = listingSchema.parse(data.data)
