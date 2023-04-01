@@ -1,5 +1,5 @@
 import { redditClient } from '@/app/api-client'
-import { listingSchema } from '@/app/model/reddit'
+import { Link, Listing, listingSchema } from '@/app/model/reddit'
 import { convertMarkdownToHtml } from '@/app/utils/convert-markdown-to-html'
 import { NextResponse } from 'next/server'
 
@@ -9,6 +9,8 @@ export async function GET(request: Request, { params }: { params: { subreddit: s
   const after = searchParams.get('after')
 
   const urlSearchParams = new URLSearchParams()
+  urlSearchParams.set('limit', '3')
+
   if (typeof before === 'string') {
     urlSearchParams.set('before', before)
   } else if (typeof after === 'string') {
@@ -16,11 +18,22 @@ export async function GET(request: Request, { params }: { params: { subreddit: s
   }
 
   try {
-    const data = await redditClient(
-      `/r/${params.subreddit}/new.json?${urlSearchParams.toString()}&limit=${3}`,
+    const beforeData = await redditClient(
+      `/r/${params.subreddit}/new.json?${urlSearchParams.toString()}`,
     )
+    const beforeListing = listingSchema.parse(beforeData.data)
+    if (beforeListing.data.children.length === 0) {
+      return NextResponse.json([])
+    }
 
-    const listing = listingSchema.parse(data.data)
+    const newData = await redditClient(`/r/${params.subreddit}/new.json?limit=3`)
+    const newListing = listingSchema.parse(newData.data)
+
+    const listing =
+      firstLink(beforeListing)?.data.name === firstLink(newListing)?.data.name
+        ? beforeListing
+        : newListing
+
     const listingChildrenWithHtml = await Promise.all(
       listing.data.children.map(async (child) => ({
         ...child,
@@ -32,4 +45,8 @@ export async function GET(request: Request, { params }: { params: { subreddit: s
   } catch (error) {
     return NextResponse.json(error, { status: 500 })
   }
+}
+
+function firstLink(listing: Listing): Link | undefined {
+  return listing.data.children.at(0)
 }
