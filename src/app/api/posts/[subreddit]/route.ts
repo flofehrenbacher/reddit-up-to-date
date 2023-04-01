@@ -1,5 +1,6 @@
 import { redditClient } from '@/app/api-client'
 import { listingSchema } from '@/app/model/reddit'
+import { convertMarkdownToHtml } from '@/app/utils/convert-markdown-to-html'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request, { params }: { params: { subreddit: string } }) {
@@ -20,7 +21,14 @@ export async function GET(request: Request, { params }: { params: { subreddit: s
     )
 
     const listing = listingSchema.parse(data.data)
-    return NextResponse.json(listing.data.children)
+    const listingChildrenWithHtml = await Promise.all(
+      listing.data.children.map(async (child) => ({
+        ...child,
+        data: { ...child.data, selftext: await convertMarkdownToHtml(child.data.selftext) },
+      })),
+    )
+
+    return NextResponse.json(listingChildrenWithHtml)
   } catch (error) {
     return NextResponse.json(error, { status: 500 })
   }
