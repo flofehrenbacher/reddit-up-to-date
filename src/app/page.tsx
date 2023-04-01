@@ -121,15 +121,15 @@ function Section({ title, text, url, date, label }: Section) {
   return (
     <section
       style={{ background: bgColor, color: textColor }}
-      className={`h-5/6 -mb-4 snap-start snap-always p-8 place-content-center overflow-hidden`}
+      className={`h-5/6 -mb-4 pb-9 snap-start snap-always p-8 place-content-center overflow-hidden`}
     >
       <a href={url} className="h-full flex flex-col gap-5" target="_blank">
         <time>{date}</time>
         {label}
         <h2 className="text-3xl text-ellipsis">{title}</h2>
         {text ? (
-          <div className="relative">
-            <div className="h-max overflow-hidden" dangerouslySetInnerHTML={{ __html: text }}></div>
+          <div className="flex-shrink overflow-hidden relative">
+            <div dangerouslySetInnerHTML={{ __html: text }}></div>
             <div
               style={{ background: `linear-gradient(rgb(255 255 255 / 0) 70%, ${bgColor})` }}
               className="h-full absolute top-0 left-0 w-full"
