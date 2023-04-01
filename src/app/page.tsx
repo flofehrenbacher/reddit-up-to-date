@@ -126,9 +126,15 @@ function Section({ title, text, url, date, label }: Section) {
       <a href={url} className="h-full flex flex-col gap-5" target="_blank">
         <time>{date}</time>
         {label}
-        <h2 className="text-3xl line-clamp-4 text-ellipsis">{title}</h2>
+        <h2 className="text-3xl text-ellipsis">{title}</h2>
         {text ? (
-          <div className="line-clamp-6 text-ellipsis" dangerouslySetInnerHTML={{ __html: text }} />
+          <div className="relative">
+            <div className="h-max overflow-hidden" dangerouslySetInnerHTML={{ __html: text }}></div>
+            <div
+              style={{ background: `linear-gradient(rgb(255 255 255 / 0) 70%, ${bgColor})` }}
+              className="h-full absolute top-0 left-0 w-full"
+            ></div>
+          </div>
         ) : null}
         <p className="self-start">See post on reddit →</p>
       </a>
