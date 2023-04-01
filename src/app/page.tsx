@@ -177,7 +177,7 @@ function Label({ link }: { link: Link }) {
   return <p className="text-xl">{link.data.link_flair_text}</p>
 }
 
-export function ImageSuccessFilled({ size }: { size: number }) {
+function ImageSuccessFilled({ size }: { size: number }) {
   return (
     <>
       <svg
