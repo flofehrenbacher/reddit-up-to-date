@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider, useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { Inter } from 'next/font/google'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocalStorageState } from './hooks/use-local-storage-state'
 import { Link } from './model/reddit'
 import { generateRandomPastelColors } from './utils/generate-random-pastel-colors'
@@ -118,6 +118,16 @@ interface Section {
 function Section({ title, text, url, date, label }: Section) {
   const { bgColor, textColor } = generateRandomPastelColors()
 
+  const parentContainerRef = useRef<HTMLDivElement | null>(null)
+  const textRef = useRef<HTMLDivElement | null>(null)
+  const [isTextOverflowing, setIsTextOverflowing] = useState(false)
+
+  useLayoutEffect(() => {
+    setIsTextOverflowing(
+      (textRef.current?.clientHeight ?? 0) > (parentContainerRef.current?.clientHeight ?? 0),
+    )
+  }, [])
+
   return (
     <section
       style={{ background: bgColor, color: textColor }}
@@ -128,12 +138,14 @@ function Section({ title, text, url, date, label }: Section) {
         {label}
         <h2 className="text-3xl text-ellipsis">{title}</h2>
         {text ? (
-          <div className="flex-shrink overflow-hidden relative">
-            <div dangerouslySetInnerHTML={{ __html: text }}></div>
-            <div
-              style={{ background: `linear-gradient(rgb(255 255 255 / 0) 70%, ${bgColor})` }}
-              className="h-full absolute top-0 left-0 w-full"
-            ></div>
+          <div ref={parentContainerRef} className="flex-shrink overflow-hidden relative">
+            <div ref={textRef} dangerouslySetInnerHTML={{ __html: text }}></div>
+            {isTextOverflowing ? (
+              <div
+                style={{ background: `linear-gradient(rgb(255 255 255 / 0) 70%, ${bgColor})` }}
+                className="h-full absolute top-0 left-0 w-full"
+              />
+            ) : null}
           </div>
         ) : null}
         <p className="self-start">See post on reddit →</p>
