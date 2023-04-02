@@ -23,28 +23,21 @@ export async function GET(request: Request, { params }: { params: { subreddit: s
     )
     const beforeOrAfterListing = listingSchema.parse(beforeOrAfterData.data)
 
-    if (after) {
-      return NextResponse.json(beforeOrAfterListing)
-    }
-
-    if (beforeOrAfterListing.data.children.length === 0) {
-      return NextResponse.json([])
-    }
-
     const newData = await redditClient(`/r/${params.subreddit}/new.json?limit=3`)
     const newListing = listingSchema.parse(newData.data)
 
-    const listing =
-      firstLink(beforeOrAfterListing)?.data.name === firstLink(newListing)?.data.name
-        ? beforeOrAfterListing
-        : newListing
+    const firstLinkBeforeOrAfter = firstLink(beforeOrAfterListing)
+    const firstLinkNew = firstLink(newListing)
 
-    const listingChildrenWithHtml = await Promise.all(
-      listing.data.children.map(async (child) => ({
-        ...child,
-        data: { ...child.data, selftext: await convertMarkdownToHtml(child.data.selftext) },
-      })),
-    )
+    const listing =
+      Boolean(before) &&
+      firstLinkNew &&
+      firstLinkBeforeOrAfter &&
+      firstLinkNew.data.created_utc > firstLinkBeforeOrAfter.data.created_utc
+        ? newListing
+        : beforeOrAfterListing
+
+    const listingChildrenWithHtml = await getListingWithHTML(listing)
 
     return NextResponse.json(listingChildrenWithHtml)
   } catch (error) {
@@ -54,4 +47,13 @@ export async function GET(request: Request, { params }: { params: { subreddit: s
 
 function firstLink(listing: Listing): Link | undefined {
   return listing.data.children.at(0)
+}
+
+async function getListingWithHTML(listing: Listing) {
+  return await Promise.all(
+    listing.data.children.map(async (child) => ({
+      ...child,
+      data: { ...child.data, selftext: await convertMarkdownToHtml(child.data.selftext) },
+    })),
+  )
 }

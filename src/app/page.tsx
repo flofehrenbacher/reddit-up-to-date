@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocalStorageState } from './hooks/use-local-storage-state'
 import { Link } from './model/reddit'
 import { generateRandomPastelColors } from './utils/generate-random-pastel-colors'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -14,6 +15,7 @@ const queryClient = new QueryClient()
 export default function AppWithClientProvider() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ReactQueryDevtools initialIsOpen={false} />
       <main className={`${inter.className} h-screen snap-y snap-mandatory overflow-scroll`}>
         <UpToDate />
       </main>
